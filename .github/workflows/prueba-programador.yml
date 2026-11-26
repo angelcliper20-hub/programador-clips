@@ -1,0 +1,34 @@
+name: Prueba del programador
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/prueba-programador.yml
+permissions:
+  contents: write
+jobs:
+  prueba:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Probar un MP4 y su horario
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="prueba-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          ffmpeg -v error -f lavfi -i color=c=blue:s=360x640:r=30 -t 2 -c:v libx264 -pix_fmt yuv420p prueba.mp4
+          gh release create "$tag" prueba.mp4 --target "$GITHUB_SHA" --prerelease --title "Clip de prueba" --notes "Clip sintético. Prueba sin llamadas a las redes sociales."
+          url="https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/prueba.mp4"
+          jq -n --arg url "$url" '{zona:"America/New_York",franjas:["00:00","04:00","12:00","20:00"],clip:{url:$url,redes:{instagram:{caption:"Prueba de Reel"},tiktok:{caption:"Prueba de borrador"}}}}' > horario-prueba.json
+          jq -e '.franjas == ["00:00","04:00","12:00","20:00"] and (.clip.redes.instagram.caption|length > 0) and (.clip.redes.tiktok.caption|length > 0)' horario-prueba.json
+          curl --fail --silent --show-error --location --retry 4 "$url" -o recibido.mp4
+          cmp prueba.mp4 recibido.mp4
+          gh release upload "$tag" horario-prueba.json
+          {
+            echo 'El clip público se descargó sin credenciales y coincide byte por byte.'
+            echo 'El horario incluye las cuatro franjas y los dos captions.'
+            echo 'Publicaciones en redes sociales: 0.'
+          } >> "$GITHUB_STEP_SUMMARY"
