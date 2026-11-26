@@ -18,6 +18,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ffmpeg
+          fi
           tag="prueba-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           ffmpeg -v error -f lavfi -i color=c=blue:s=360x640:r=30 -t 2 -c:v libx264 -pix_fmt yuv420p prueba.mp4
           gh release create "$tag" prueba.mp4 --target "$GITHUB_SHA" --prerelease --title "Clip de prueba" --notes "Clip sintético. Prueba sin llamadas a las redes sociales."
